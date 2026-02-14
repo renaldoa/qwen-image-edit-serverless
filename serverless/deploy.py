@@ -42,9 +42,9 @@ def create_template():
         "name": f"{ENDPOINT_NAME}-template",
         "imageName": IMAGE_NAME,
         "containerDiskInGb": 20,
-        "env": [
-            {"key": "HF_HOME", "value": "/runpod-volume/huggingface-cache"},
-        ],
+        "env": {
+            "HF_HOME": "/runpod-volume/huggingface-cache",
+        },
     }
     data = rest_api("POST", "/templates", payload)
     return data["id"]
