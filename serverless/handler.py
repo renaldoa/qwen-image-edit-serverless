@@ -1,33 +1,63 @@
 #!/usr/bin/env python3
 """RunPod serverless handler for Qwen-Image-Edit-2511."""
 
-import base64
-import io
+import sys
 import os
 
+# Immediate early logging before any heavy imports
+print("=" * 60, flush=True)
+print("Handler starting...", flush=True)
+print(f"Python: {sys.version}", flush=True)
+print(f"CWD: {os.getcwd()}", flush=True)
+print(f"CUDA_VISIBLE_DEVICES: {os.environ.get('CUDA_VISIBLE_DEVICES', 'not set')}", flush=True)
+print("=" * 60, flush=True)
+
+import base64
+import io
+
+print("Importing torch...", flush=True)
 import torch
+print(f"PyTorch {torch.__version__}, CUDA available: {torch.cuda.is_available()}", flush=True)
+if torch.cuda.is_available():
+    print(f"GPU: {torch.cuda.get_device_name(0)}, VRAM: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB", flush=True)
+
+print("Importing runpod...", flush=True)
 import runpod
+
+print("Importing PIL...", flush=True)
 from PIL import Image
+
+print("Importing diffusers...", flush=True)
 from diffusers import QwenImageEditPlusPipeline
+print("All imports done.", flush=True)
 
 MODEL_ID = "Qwen/Qwen-Image-Edit-2511"
 
 # RunPod model caching stores HF models at this path.
-# Falls back to default HF cache if not available.
 CACHE_DIR = "/runpod-volume/huggingface-cache/hub"
 if os.path.isdir(CACHE_DIR):
     os.environ["HF_HOME"] = "/runpod-volume/huggingface-cache"
-    print(f"Using RunPod model cache: {CACHE_DIR}")
+    print(f"Using RunPod model cache: {CACHE_DIR}", flush=True)
+else:
+    print(f"RunPod cache dir not found ({CACHE_DIR}), using default HF cache", flush=True)
+    print(f"HF_HOME={os.environ.get('HF_HOME', 'not set')}", flush=True)
 
 # Load pipeline at module level so it persists between requests
-print(f"Loading {MODEL_ID} ...")
-pipeline = QwenImageEditPlusPipeline.from_pretrained(
-    MODEL_ID,
-    torch_dtype=torch.bfloat16,
-)
-pipeline.to("cuda")
-pipeline.set_progress_bar_config(disable=None)
-print("Model loaded and ready on CUDA.")
+print(f"Loading {MODEL_ID} ...", flush=True)
+try:
+    pipeline = QwenImageEditPlusPipeline.from_pretrained(
+        MODEL_ID,
+        torch_dtype=torch.bfloat16,
+    )
+    print("Pipeline loaded, moving to CUDA...", flush=True)
+    pipeline.to("cuda")
+    pipeline.set_progress_bar_config(disable=None)
+    print("Model loaded and ready on CUDA.", flush=True)
+except Exception as e:
+    print(f"FATAL: Failed to load model: {e}", flush=True)
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
 
 
 def decode_image(b64_string):
