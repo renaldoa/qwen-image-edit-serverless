@@ -1,4 +1,4 @@
-FROM runpod/pytorch:2.5.1-py3.10-cuda12.1.0-devel-ubuntu22.04
+FROM runpod/pytorch:1.0.3-cu1290-torch280-ubuntu2204
 
 ENV DEBIAN_FRONTEND=noninteractive
 
