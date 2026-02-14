@@ -44,6 +44,8 @@ else:
 
 # Load pipeline at module level so it persists between requests
 print(f"Loading {MODEL_ID} ...", flush=True)
+pipeline = None
+_load_error = None
 try:
     pipeline = QwenImageEditPlusPipeline.from_pretrained(
         MODEL_ID,
@@ -54,10 +56,11 @@ try:
     pipeline.set_progress_bar_config(disable=None)
     print("Model loaded and ready on CUDA.", flush=True)
 except Exception as e:
-    print(f"FATAL: Failed to load model: {e}", flush=True)
+    _load_error = str(e)
+    print(f"ERROR: Failed to load model: {e}", flush=True)
     import traceback
     traceback.print_exc()
-    sys.exit(1)
+    print("Will start serverless loop anyway to report errors via API.", flush=True)
 
 
 def decode_image(b64_string):
@@ -75,6 +78,9 @@ def encode_image(pil_image):
 
 def handler(job):
     """Process a single image-editing request."""
+    if pipeline is None:
+        return {"error": f"Model failed to load: {_load_error}"}
+
     job_input = job["input"]
 
     # --- Parse input images ---
